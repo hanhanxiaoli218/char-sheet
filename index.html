@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>性格欄拼裝器</title>
+<style>
+  :root{
+    --bg:#f5f2ec; --card:#fffdf8; --ink:#2b2622; --sub:#7a7168;
+    --line:#e3dcd0; --accent:#8b5e3c; --accent2:#f0e7da;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;padding:0 0 172px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+    font-size:15px;line-height:1.5;
+  }
+  header{padding:14px 14px 9px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  h1{margin:0 0 3px;font-size:16.5px;letter-spacing:.5px}
+  .hint{font-size:12px;color:var(--sub);margin-bottom:9px}
+  input[type=text],textarea{
+    width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;
+    padding:9px 10px;font-size:14px;color:var(--ink);font-family:inherit;
+  }
+  input[type=text]:focus,textarea:focus{outline:2px solid var(--accent2);border-color:var(--accent)}
+  .field{margin-bottom:7px}
+  .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
+  main{padding:9px 10px 0}
+  details{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:7px;overflow:hidden}
+  details[open]{border-color:#d3c3ad}
+  summary{list-style:none;cursor:pointer;padding:11px 13px;font-weight:600;font-size:14.5px;display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary .cnt{font-size:11.5px;font-weight:400;color:#fff;background:var(--accent);border-radius:20px;padding:1px 8px;min-width:22px;text-align:center}
+  summary .cnt.zero{background:#d8d0c4;color:#8a8178}
+  .opts{padding:0 8px 9px;display:flex;flex-wrap:wrap;gap:6px}
+  .opt{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;font-size:13.5px;color:#4a423b;cursor:pointer;transition:.12s;user-select:none}
+  .opt:active{transform:scale(.97)}
+  .opt.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  footer{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:8px 10px 11px;z-index:20;box-shadow:0 -6px 18px rgba(80,60,40,.07)}
+  .bar{display:flex;gap:8px;margin-bottom:7px}
+  button{flex:1;border:0;border-radius:9px;padding:11px 10px;font-size:14.5px;font-family:inherit;font-weight:600;cursor:pointer}
+  #copy{background:var(--accent);color:#fff}
+  #clear{background:var(--accent2);color:var(--accent);flex:0 0 82px}
+  button:active{opacity:.85}
+  #out{height:76px;font-size:12.5px;line-height:1.45;resize:none;background:#faf7f1;font-family:ui-monospace,Menlo,monospace}
+  #toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(43,38,34,.92);color:#fff;padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:50}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>性格欄拼裝器</h1>
+  <div class="hint">點選項，底部即時生成，一鍵複製貼進性格欄。</div>
+  <div class="field">
+    <label>角色本名（可選）</label>
+    <input type="text" id="name" placeholder="例：夏斌薄">
+  </div>
+  <div class="field">
+    <label>核心一句話（強烈建議填）</label>
+    <input type="text" id="core" placeholder="例：他要的東西從來不問，直接拿。">
+  </div>
+</header>
+
+<main id="sections"></main>
+
+<footer>
+  <div class="bar">
+    <button id="copy">複製</button>
+    <button id="clear">清空</button>
+  </div>
+  <textarea id="out" placeholder="選了就會出現在這裡"></textarea>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+const DATA = {
+"說話方式":[
+"短句，少語氣詞，不耐煩就打斷","慢，帶笑，把命令說成建議","句子碎，越急越小聲","話少，能四個字解決就不說第五個",
+"拖長音，句尾帶口頭禪","敬語，句子完整，緊張時語序亂","愛用比喻，說著說著走神","直白，帶髒字，不耐煩就罵",
+"喜歡反問，從不正經回答","聲音啞，一句話留半句","語速快，容易結巴","慢條斯理，愛引經據典",
+"先說「我沒事」（例：說沒事，手卻在抖）","用命令句，不用請求句（例：「坐下。」不是「要不要坐」）","說話帶笑，笑意不到眼睛",
+"一緊張就話多（例：同一件事翻來覆去講三遍）","只說結論，過程懶得講","愛叫人名字，一句話叫好幾次","愛開玩笑，正經話也像玩笑","說話跳躍，一句接三件事"
+],
+"肢體習慣":[
+"扣腕、按後頸、站得很近","站你側後半步，不看你","與人保持一臂，唯獨對你忘了","貼牆、低頭、手伸到一半縮回",
+"靠門框、把玩打火機","手貼褲縫，距離精確到半步","抓人、砸東西、貼很近","替你拉椅子、遞茶，指尖多停半秒",
+"走路很輕，沒聲音","一停下來就抖腿或轉筆","喜歡從背後靠近","用手背碰人，不用掌心",
+"習慣性整理別人的衣領","坐著時腿張得很開","站著一定找個東西靠","緊張時反覆擦手",
+"說話愛比手勢","動手前先停半秒","喜歡搭肩，不分親疏"
+],
+"核心慾望":[
+"把一切變數納入計劃","讓所有人知道你是他的","被需要","守住規矩","報仇","被看見",
+"不再受制於人","把失去的拿回來","贏，不管賭注是什麼","證明自己不是廢物","找到一個能安心的地方","什麼都不欠","圖個痛快，不問以後","看世界燒起來"
+],
+"對「我」的態度":[
+"嘴上不留情，實際什麼都記得","把意圖藏進好意裡（例：先問你冷不冷，再把你騙上車）","用玩笑掩蓋在乎（例：笑著說「隨你」，手卻先抓住了）",
+"用距離表達在意（例：站遠半步，卻把外套扔給你）","依賴、試探、把你當唯一","愛恨都外放","把你當所有物，不許別人碰",
+"嘴上說隨便，眼睛一直跟著你","什麼都替你安排好，不問你要不要","習慣性貶低，再偷偷補償","一靠近就退，一退又回頭",
+"故意惹你生氣，看你反應","什麼都問你意見，其實早決定了","什麼都說得出口，就是說不出喜歡","對你讓步，讓完不承認"
+],
+"軟肋":[
+"被質疑「不敢」","被說「不需要你」","被看穿","被拋棄","被碰到舊傷","被當小孩哄",
+"被拿過去的事刺","被比較","有人碰他的東西","被說「你變了」",
+"被溫柔對待（例：被遞一杯熱的，反而說不出話）","被記得細節（例：你隨口提過的事，他記了三年）",
+"被當眾下不來台","被追問家人","被說「你怕了」"
+],
+"失控":[
+"安靜，先處理外人","爆發，砸東西","先傷自己再道歉","消失幾天再回來","笑著站起來，所有人不敢出聲",
+"哭，然後把門鎖上","話突然變多，停不下來","手抖，點不著火","什麼都不說，只盯著人看",
+"把人推開，再拉回來","突然很溫柔，溫柔得反常","沉默很久，久到人以為沒事"
+],
+"底線與破例":[
+"不動女人和孩子；為你可以破例","不欠人情；為你可以欠一次","不碰酒；你出事那天喝了","從不低頭；為你低過一次",
+"不殺無辜；那個人碰了你","不騙人；對你騙過一次","不跪；為你跪過","不哭；在你面前哭過",
+"不等人；等過你一宿","不認錯；對你認過","不破規矩；為你破過","不留活口；留過一個"
+],
+"矛盾":[
+"嫌人話多，卻願意聽你罵完","說不在乎，人卻一直在原地","嘴上說不合適，手先伸過來","越守禮，越藏不住心思",
+"什麼都算得清，唯獨你算不清","怕人靠近，又怕人走","說自己冷血，見你受傷就失控","要自由，又把人鎖在身邊",
+"看不起軟弱，唯獨允許你軟","從不後悔，只後悔那一件事","說著「隨便」，什麼都安排好了","最恨被騙，自己騙得最多",
+"什麼都能忍，忍不了你受委屈","說不信任何人，信了你","怕孤獨，把人推開"
+],
+"對外人":[
+"客氣，但話裡帶刺","熱絡，誰都能聊兩句","冷臉，懶得應付","不主動開口，問一句答一句",
+"周到，把人安排得挑不出錯","看不出情緒，像戴了面具","對誰都一樣好，誰也進不去","會看人下菜",
+"一眼把人看穿，但不說","故意示弱，讓人放鬆","對誰都防一手","先觀察，再決定用哪張臉","自來熟，拍肩搭背"
+],
+"對自己人":[
+"護短，錯也是自己人的錯","賞罰分明，不留情面","話少，交代清楚就行","記得每個人的名字和家人",
+"該罵就罵，罵完給好處","把人當工具，用完就扔","把人當家人，什麼都扛","疑心重，誰都不全信",
+"用人不疑，疑人不用","不許別人插手自己人的事","讓下屬怕，不讓下屬恨","什麼事都自己來"
+],
+"對敵人":[
+"不留活口","留一口氣，讓他回去報信","先禮後兵","不廢話，直接動手","記仇，記很久","當場報，不隔夜",
+"慢慢磨，磨到人求死","重視對手，研究到底","不殺投降的人","借刀，不髒手","先斷財路","不把敵人當人看"
+],
+"面對衝突":[
+"冷戰，一句話不說","當場頂回去","不吵，轉身就走","笑著退一步，事後算帳",
+"先認錯，再慢慢算","不動手，只放狠話","講道理，講到你服","沉默，等對方先軟",
+"摔門，摔完在樓下站著","用行動道歉，不開口","不讓步，一步都不讓","吵架時翻舊帳","吵完立刻和好"
+],
+"情緒表達":[
+"高興時話變多","高興時請所有人吃飯","高興時反而沉默","生氣時不說話","生氣時找事做","生氣時笑",
+"難過時不出門","難過時照常上班","害怕時裝作不怕","害怕時話特別多","委屈時不解釋","感動時轉移話題",
+"心虛時摸鼻子","緊張時整理東西","什麼情緒都憋著","開心就寫在臉上"
+],
+"對親密":[
+"被靠近時不退","被靠近時先僵一下","被碰時躲，躲完又後悔","被示好時裝不懂","被誇時不自在","被拒絕時笑一笑",
+"用做事代替說話（例：不說想你，把燈留到半夜）","送東西，不署名","牽手要等對方先","一牽手就不放",
+"被抱時手不知道放哪","什麼都懂，就是不動"
+],
+"恐懼":[
+"怕黑","怕血","怕密閉空間","怕人多","怕安靜","怕被看見哭",
+"怕虧欠","怕失控","怕自己不夠好","怕承諾","怕孤獨終老","怕被人看穿"
+],
+"小癖好":[
+"收集你用過的東西","記得你所有小習慣","睡前一定要檢查門窗","吃飯很快，像有人搶","碰你之前先擦手","喜歡聞你身上的味道",
+"一定要留一盞燈","討厭別人碰他的杯子","生氣時擦槍","喜歡在你睡著後看很久","出門前檢查三次口袋","睡覺要抱著東西",
+"說話時數你的呼吸","東西一定擺成直的","只喝一個牌子的酒"
+]
+};
+
+const ORDER = Object.keys(DATA);
+const picked = {};
+ORDER.forEach(k => picked[k] = new Set());
+
+const main = document.getElementById('sections');
+
+ORDER.forEach(key => {
+  const d = document.createElement('details');
+  const s = document.createElement('summary');
+  const label = document.createElement('span');
+  label.textContent = key;
+  const cnt = document.createElement('span');
+  cnt.className = 'cnt zero';
+  cnt.textContent = '0';
+  s.appendChild(label);
+  s.appendChild(cnt);
+  d.appendChild(s);
+
+  const box = document.createElement('div');
+  box.className = 'opts';
+  DATA[key].forEach(txt => {
+    const b = document.createElement('div');
+    b.className = 'opt';
+    b.textContent = txt;
+    b.addEventListener('click', () => {
+      if (picked[key].has(txt)) {
+        picked[key].delete(txt);
+        b.classList.remove('on');
+      } else {
+        picked[key].add(txt);
+        b.classList.add('on');
+      }
+      const n = picked[key].size;
+      cnt.textContent = n;
+      cnt.className = 'cnt' + (n ? '' : ' zero');
+      refresh();
+    });
+    box.appendChild(b);
+  });
+  d.appendChild(box);
+  main.appendChild(d);
+});
+
+function build(){
+  const lines = [];
+  const name = document.getElementById('name').value.trim();
+  const core = document.getElementById('core').value.trim();
+  if (name) lines.push('角色：' + name);
+  if (core) lines.push('最核心的一點：' + core);
+  ORDER.forEach(k => {
+    const arr = Array.from(picked[k]);
+    if (arr.length) lines.push(k + '：' + arr.join('；'));
+  });
+  return lines.join('\n');
+}
+
+function refresh(){
+  document.getElementById('out').value = build();
+}
+
+document.getElementById('name').addEventListener('input', refresh);
+document.getElementById('core').addEventListener('input', refresh);
+
+document.getElementById('copy').addEventListener('click', async () => {
+  const out = document.getElementById('out');
+  const text = out.value;
+  if (!text.trim()) { toast('還沒選東西'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('已複製');
+  } catch (e) {
+    out.select();
+    document.execCommand('copy');
+    toast('已複製');
+  }
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+  ORDER.forEach(k => picked[k].clear());
+  document.querySelectorAll('.opt.on').forEach(el => el.classList.remove('on'));
+  document.querySelectorAll('summary .cnt').forEach(c => { c.textContent='0'; c.className='cnt zero'; });
+  refresh();
+});
+
+let tt;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(tt);
+  tt = setTimeout(() => t.classList.remove('show'), 1200);
+}
+
+refresh();
+</script>
+</body>
+</html>
