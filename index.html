@@ -371,7 +371,7 @@ window.SHEET_PACKS = [{"id": "campus", "name": "校園", "desc": "上課、考�
     return '';
   }
 
-  function typeFromTags() {
+  function typeFromTags(minVotes) {
     var votes = {}, any = false;
     DIM.forEach(function (d) {
       (S.picked[d] || []).forEach(function (id) {
@@ -385,18 +385,16 @@ window.SHEET_PACKS = [{"id": "campus", "name": "校園", "desc": "上課、考�
       return votes[b] - votes[a] || TYPES.indexOf(a) - TYPES.indexOf(b);
     });
     var top = keys[0];
-    if (keys.length > 1 && votes[keys[1]] === votes[top]) {
-      var pt = presetType();
-      if (pt && keys.indexOf(pt) >= 0) return pt;
-    }
+    if (votes[top] < (minVotes || 1)) return '';   // 一票不算數，避免雜訊定調
     return top;
   }
 
+  /* 手動 > 原型（明確選擇）> 標籤（需兩票以上）> 無 */
   function resolveType() {
     if (S.typeManual !== null) return S.typeManual || '';
-    var t = typeFromTags();
-    if (t) return t;
-    return presetType();
+    var pt = presetType();
+    if (pt) return pt;
+    return typeFromTags(2);
   }
 
   /* ---------- build output ---------- */
@@ -554,17 +552,27 @@ window.SHEET_PACKS = [{"id": "campus", "name": "校園", "desc": "上課、考�
   function renderTypeOptions() {
     var sel = $('#typeSel');
     if (!sel) return;
-    var cur = resolveType();
     sel.innerHTML = '';
     var o0 = document.createElement('option');
     o0.value = '';
-    o0.textContent = cv('不指定');
     sel.appendChild(o0);
     TYPES.forEach(function (t) {
       var o = document.createElement('option');
       o.value = t;
-      o.textContent = cv(t);
       sel.appendChild(o);
+    });
+    paintTypeSel();
+  }
+
+  /* 標出「這是你自己定的」還是「它算的」 */
+  function paintTypeSel() {
+    var sel = $('#typeSel');
+    if (!sel) return;
+    var cur = resolveType();
+    var auto = S.typeManual === null && !!cur;
+    Array.prototype.forEach.call(sel.options, function (o) {
+      var base = o.value ? cv(o.value) : cv('不指定');
+      o.textContent = (auto && o.value === cur) ? cv('（自動）') + base : base;
     });
     sel.value = cur || '';
   }
@@ -606,8 +614,7 @@ window.SHEET_PACKS = [{"id": "campus", "name": "校園", "desc": "上課、考�
     }
     var out = $('#out');
     out.value = txt;
-    var sel = $('#typeSel');
-    if (sel) sel.value = resolveType() || '';
+    paintTypeSel();
   }
 
   function refreshDimCount(d) {
